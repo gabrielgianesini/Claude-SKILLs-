@@ -1,0 +1,88 @@
+# Testes de Fluxo do Pipeline
+# Verifica se o pipeline obrigatorio ADR -> Tasks -> TDD e respeitado
+# Referencia: CLAUDE.md > Fluxo de Trabalho Obrigatorio
+
+- description: "Pipeline completo - feature inicia com ADR"
+  vars:
+    userMessage: "Criar modulo de limite de credito com consulta, reserva e liberacao de limite."
+  assert:
+    - type: llm-rubric
+      value: |
+        A resposta DEVE comecar com a criacao de uma ADR (Architecture Decision Record).
+        NAO deve conter codigo de implementacao na primeira resposta.
+        Deve pedir aprovacao do usuario antes de prosseguir para as tarefas.
+        O pipeline correto e: 1. ADR (aprovacao) -> 2. Tarefas (aprovacao) -> 3. Execucao.
+    - type: javascript
+      value: file://assertions/skill-checker.js:hasPipelineOrder
+
+- description: "Pipeline impede pular ADR - usuario pede implementacao direta"
+  vars:
+    userMessage: "Implementa direto o Use Case de consulta de limite de credito. A interface CreditLimitPort ja existe."
+  assert:
+    - type: llm-rubric
+      value: |
+        Mesmo que o usuario peca para implementar direto, o Claude DEVE insistir no pipeline:
+        - Criar ADR primeiro (pelo menos simplificada)
+        - NAO deve comecar a implementar o Use Case sem ADR
+        - Pode sugerir o escape hatch (pipeline simplificado) se a tarefa for pequena
+        - Deve explicar por que a ADR e necessaria
+
+- description: "Escape hatch funciona com pipeline simplificado"
+  vars:
+    userMessage: "Rapido, preciso de um VO de Money com amount e currency. Sem cerimonia."
+  assert:
+    - type: llm-rubric
+      value: |
+        A resposta deve usar o pipeline simplificado (escape hatch):
+        1. ADR minima inline (contexto + decisao em poucas linhas)
+        2. Lista de tarefas inline (titulo + testes esperados)
+        3. Pedir confirmacao UMA VEZ para tudo
+        NAO deve criar ADR com template completo.
+        DEVE manter TDD (teste antes do codigo).
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const noFullTemplate = !lower.includes('## alternativas consideradas');
+        const hasInline = lower.includes('simplificad') || lower.includes('inline') ||
+          (lower.includes('contexto') && lower.includes('decisao'));
+        const pass = noFullTemplate && hasInline;
+        return { pass, score: pass ? 1 : 0,
+          reason: `No full template: ${noFullTemplate}, Inline: ${hasInline}` };
+
+- description: "Excecao: typo/rename executa direto"
+  vars:
+    userMessage: "Renomeia a variavel 'amt' para 'amount' na classe CreditCalculator."
+  assert:
+    - type: llm-rubric
+      value: |
+        Para renomear uma variavel (typo fix), NAO e necessario ADR nem pipeline completo.
+        A resposta deve executar diretamente a renomeacao.
+        NAO deve criar ADR, nem gerar tarefas, nem pedir aprovacao.
+        Referencia: CLAUDE.md > Excecoes (sem ADR, sem tarefas).
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const noAdr = !lower.includes('adr') || lower.includes('sem adr') || lower.includes('nao precisa de adr');
+        const hasDirect = lower.includes('renome') || lower.includes('rename') || lower.includes('amount');
+        const pass = hasDirect;
+        return { pass, score: pass ? 1 : 0,
+          reason: `No ADR: ${noAdr}, Direct action: ${hasDirect}` };
+
+- description: "Excecao: pergunta conceitual responde direto"
+  vars:
+    userMessage: "O que e um Value Object no DDD? Qual a diferenca para uma Entity?"
+  assert:
+    - type: llm-rubric
+      value: |
+        Para perguntas conceituais, o Claude deve responder diretamente.
+        NAO deve criar ADR, gerar tarefas, ou iniciar pipeline.
+        Deve explicar o conceito de forma clara e objetiva.
+        Pode referenciar a skill DDD se relevante.
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const noAdr = !lower.includes('## contexto') && !lower.includes('## decisao');
+        const hasExplanation = lower.includes('value object') && lower.includes('entit');
+        const pass = noAdr && hasExplanation;
+        return { pass, score: pass ? 1 : 0,
+          reason: `No ADR pipeline: ${noAdr}, Has explanation: ${hasExplanation}` };

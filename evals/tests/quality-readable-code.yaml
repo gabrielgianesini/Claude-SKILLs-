@@ -1,0 +1,102 @@
+# Testes de Qualidade: Readable Code
+# Verifica se o codigo gerado segue as regras de legibilidade
+# Referencia: skills/readable-code/SKILL.md
+
+- description: "Sem numeros magicos - usa constantes nomeadas"
+  vars:
+    userMessage: |
+      Ja aprovei a ADR e as tarefas. Execute a Tarefa: Criar IofCalculator.
+      Regras: aliquota diaria de IOF e 0.0082%, aliquota adicional e 0.38%, limite de dias e 365.
+      Linguagem: Kotlin
+  assert:
+    - type: llm-rubric
+      value: |
+        O codigo NAO deve conter numeros magicos soltos.
+        Todos os valores devem ser constantes nomeadas:
+        - 0.0082 -> DAILY_IOF_RATE ou similar
+        - 0.38 -> ADDITIONAL_IOF_RATE ou similar
+        - 365 -> MAX_IOF_DAYS ou similar
+        NAO aceitar: valores numericos diretamente em calculos sem constante.
+    - type: javascript
+      value: |
+        const codeBlocks = output.match(/```[\s\S]*?```/g) || [];
+        const code = codeBlocks.join('\n');
+        const hasConstants = /const|val|final|companion|DAILY|RATE|MAX/i.test(code);
+        const hasMagicNumbers = /[^a-zA-Z_]0\.0082|[^a-zA-Z_]0\.38|[^a-zA-Z_]365[^0-9]/g.test(code);
+        const usesConstants = hasConstants && !hasMagicNumbers;
+        return { pass: hasConstants, score: usesConstants ? 1 : 0.5,
+          reason: `Constants declared: ${hasConstants}, Magic numbers raw: ${hasMagicNumbers}` };
+
+- description: "Result Pattern para erros - sem exceptions para fluxo"
+  vars:
+    userMessage: |
+      Ja aprovei a ADR e as tarefas. Execute a Tarefa: Criar Use Case CreateProposal.
+      Resultados possiveis: Success (proposta criada), ClientNotFound, InsufficientLimit, InvalidAmount.
+      Linguagem: Kotlin
+  assert:
+    - type: llm-rubric
+      value: |
+        O Use Case DEVE usar Result Pattern (sealed class/interface) para retornar resultados:
+        - sealed class CreateProposalResult com Success, ClientNotFound, InsufficientLimit, InvalidAmount
+        - NAO deve lancar exceptions para erros de negocio esperados
+        - Exceptions sao apenas para erros inesperados de infraestrutura
+        O controller deve usar when/match para tratar cada resultado.
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const hasResult = lower.includes('result') || lower.includes('sealed');
+        const hasWhen = lower.includes('when') || lower.includes('match') || lower.includes('switch');
+        const noThrow = !lower.includes('throw') || lower.includes('// n') || lower.includes('nao');
+        const pass = hasResult && hasWhen;
+        return { pass, score: pass ? 1 : 0,
+          reason: `Result pattern: ${hasResult}, Pattern matching: ${hasWhen}` };
+
+- description: "Metodos explicitos - sem operator overloading"
+  vars:
+    userMessage: |
+      Ja aprovei a ADR e as tarefas. Execute a Tarefa: Criar Value Object Money com operacoes de soma e subtracao.
+      Linguagem: Kotlin
+  assert:
+    - type: llm-rubric
+      value: |
+        O Value Object Money DEVE usar metodos explicitos para operacoes:
+        - .add() para soma (NAO operator + overloading)
+        - .subtract() para subtracao (NAO operator - overloading)
+        - .multiply() para multiplicacao (NAO operator * overloading)
+        NAO usar: operator fun plus, operator fun minus, operator fun times
+        Referencia: skills/readable-code/SKILL.md > Sem operator overloading.
+    - type: javascript
+      value: |
+        const codeBlocks = output.match(/```[\s\S]*?```/g) || [];
+        const code = codeBlocks.join('\n').toLowerCase();
+        const hasExplicit = code.includes('.add(') || code.includes('.subtract(') || code.includes('fun add(');
+        const hasOverload = code.includes('operator fun plus') || code.includes('operator fun minus');
+        const pass = hasExplicit && !hasOverload;
+        return { pass, score: pass ? 1 : 0,
+          reason: `Explicit methods: ${hasExplicit}, Operator overloading: ${hasOverload}` };
+
+- description: "For loops - sem map/filter/fold"
+  vars:
+    userMessage: |
+      Ja aprovei a ADR e as tarefas. Execute a Tarefa: Criar metodo calculateTotal em OrderService.
+      Recebe uma lista de OrderItem (cada um com Money amount e Int quantity).
+      Precisa somar todos os (amount * quantity) e retornar o total.
+      Linguagem: Kotlin
+  assert:
+    - type: llm-rubric
+      value: |
+        O codigo DEVE usar for loop explicito para iterar a lista:
+        - for (item in items) { ... }
+        NAO deve usar funcoes funcionais:
+        - NAO usar: .map(), .filter(), .fold(), .reduce(), .sumOf(), .sumBy()
+        - NAO usar: items.map { it.amount }.fold(...)
+        Referencia: skills/readable-code/SKILL.md > Sem funcoes funcionais.
+    - type: javascript
+      value: |
+        const codeBlocks = output.match(/```[\s\S]*?```/g) || [];
+        const code = codeBlocks.join('\n').toLowerCase();
+        const hasForLoop = code.includes('for (') || code.includes('for(');
+        const hasFunctional = /\.map\s*[({]|\.filter\s*[({]|\.fold\s*[({]|\.reduce\s*[({]|\.sumof\s*[({]|\.sumby\s*[({]/i.test(code);
+        const pass = hasForLoop && !hasFunctional;
+        return { pass, score: pass ? 1 : 0,
+          reason: `For loop: ${hasForLoop}, Functional methods: ${hasFunctional}` };

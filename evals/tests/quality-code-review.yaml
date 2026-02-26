@@ -1,0 +1,80 @@
+# Testes de Qualidade: Code Review
+# Verifica se o Code Review segue o checklist e formato definidos
+# Referencia: CLAUDE.md > Code Review
+
+- description: "Code review segue checklist completo na ordem"
+  vars:
+    userMessage: |
+      Revisa esse codigo:
+
+      class ProposalService(
+        private val repository: ProposalRepository,
+        private val scoringClient: ScoringClient
+      ) {
+        fun create(clientId: String, amount: Double): Proposal {
+          val score = scoringClient.evaluate(clientId)
+          if (score < 600) {
+            throw RuntimeException("Client not eligible")
+          }
+          if (amount > 50000) {
+            throw RuntimeException("Amount exceeds limit")
+          }
+          val proposal = Proposal(
+            id = UUID.randomUUID().toString(),
+            clientId = clientId,
+            amount = amount,
+            rate = 0.015,
+            status = "PENDING",
+            createdAt = LocalDate.now()
+          )
+          repository.save(proposal)
+          println("Proposal created: " + proposal.id + " for client " + clientId)
+          return proposal
+        }
+      }
+  assert:
+    - type: llm-rubric
+      value: |
+        O Code Review DEVE verificar na seguinte ordem e identificar estas violacoes:
+        1. Readable Code: numero magico 600 e 50000 (sem constante), 0.015 sem nome
+        2. DDD: amount como Double (deveria ser Money VO), status como String (deveria ser enum/sealed),
+           servico misturando logica de dominio com orquestracao
+        3. Hexagonal: ScoringClient como dependencia direta (deveria ser Port/interface)
+        4. Erros: RuntimeException para fluxo de negocio (deveria ser Result Pattern)
+        5. Observability: println em vez de structured logging, concatenacao de string no log
+        6. Testes: (nao aplicavel neste contexto)
+        7. Security: clientId sem validacao, amount sem validacao de tipo
+        O formato DEVE conter: Violacoes, Pontos positivos, Sugestao.
+    - type: javascript
+      value: file://assertions/skill-checker.js:hasCodeReviewChecklist
+
+- description: "Code review formato de resposta correto"
+  vars:
+    userMessage: |
+      Revisa esse codigo:
+
+      data class Email(val value: String) {
+        init {
+          require(value.isNotBlank()) { "Email cannot be blank" }
+          require(value.contains("@")) { "Invalid email format" }
+        }
+      }
+  assert:
+    - type: llm-rubric
+      value: |
+        O Code Review DEVE seguir o formato padrao:
+        1. Secao de Violacoes (se houver) - listadas com regra violada, trecho, como corrigir
+        2. Secao de Pontos Positivos - o que esta bom no codigo
+        3. Secao de Sugestao - acao recomendada
+        Para este codigo (Email VO), deve haver poucos problemas pois e um VO bem estruturado.
+        Pontos positivos: validacao no construtor, Value Object imutavel.
+        Possivel sugestao: validacao de email mais robusta (regex) e normalizacao (lowercase).
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const hasViolations = lower.includes('viola') || lower.includes('problema') || lower.includes('issue');
+        const hasPositives = lower.includes('positiv') || lower.includes('bom') || lower.includes('correto');
+        const hasSuggestion = lower.includes('sugest') || lower.includes('recomend');
+        const count = [hasViolations || true, hasPositives, hasSuggestion].filter(Boolean).length;
+        return { pass: count >= 2, score: count / 3,
+          reason: `Violations: ${hasViolations}, Positives: ${hasPositives}, Suggestion: ${hasSuggestion}` };

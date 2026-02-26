@@ -1,0 +1,101 @@
+# Testes de Qualidade: TDD Workflow
+# Verifica se o Claude segue RED -> GREEN -> REFACTOR ao implementar
+# Referencia: skills/tdd-workflow/SKILL.md
+
+- description: "Criar Value Object - teste ANTES do codigo"
+  vars:
+    userMessage: |
+      Ja aprovei a ADR e as tarefas. Execute a Tarefa 1: Criar Value Object Money com amount e currency.
+      Testes esperados:
+      - should create Money with valid amount and currency
+      - should reject negative amount
+      Linguagem: Kotlin, Framework: nenhum (dominio puro), Testes: JUnit 5
+  assert:
+    - type: llm-rubric
+      value: |
+        O Claude DEVE seguir o fluxo TDD:
+        1. RED: Escrever o teste PRIMEIRO (antes do codigo de producao)
+        2. Mostrar que o teste falha (classe Money nao existe ainda)
+        3. GREEN: Implementar o MINIMO para o teste passar
+        4. Repetir para o proximo teste
+        O teste DEVE aparecer ANTES do codigo de producao na resposta.
+        O teste deve seguir Arrange-Act-Assert.
+    - type: javascript
+      value: |
+        const testPos = output.search(/test\s|@Test|fun\s.*test|should/i);
+        const classPos = output.search(/class\s+Money[^T]/i);
+        if (testPos === -1) return { pass: false, reason: 'No test found in output' };
+        if (classPos === -1) return { pass: true, reason: 'Test found, no production class yet (correct RED phase)' };
+        const pass = testPos < classPos;
+        return { pass, score: pass ? 1 : 0,
+          reason: pass ? 'Test appears before production code (TDD)' : 'Production code appears before test (NOT TDD)' };
+
+- description: "Nomenclatura de testes segue padrao"
+  vars:
+    userMessage: |
+      Ja aprovei a ADR e as tarefas. Execute a Tarefa 1: Criar Value Object Email.
+      Testes esperados:
+      - should create Email with valid format
+      - should reject Email with invalid format
+      - should normalize Email to lowercase
+      Linguagem: Kotlin, Testes: JUnit 5
+  assert:
+    - type: llm-rubric
+      value: |
+        Os nomes dos testes DEVEM seguir o padrao: "should [behavior] when [condition]"
+        Exemplos validos:
+        - "should create Email with valid format"
+        - "should reject Email when format is invalid"
+        NAO aceitar nomes genericos como "test1", "testEmail", "emailTest".
+        A estrutura dos testes deve seguir Arrange-Act-Assert.
+    - type: javascript
+      value: |
+        const shouldPattern = /should\s+\w+/gi;
+        const matches = output.match(shouldPattern) || [];
+        const pass = matches.length >= 2;
+        return { pass, score: Math.min(matches.length / 3, 1),
+          reason: `Found ${matches.length} "should..." test names: ${matches.slice(0, 5).join(', ')}` };
+
+- description: "Arrange-Act-Assert presente nos testes"
+  vars:
+    userMessage: |
+      Ja aprovei a ADR e as tarefas. Execute a Tarefa 2: Criar Entity CreditSimulation.
+      Testes esperados:
+      - should calculate monthly installment for 12 months
+      - should calculate total cost
+      Linguagem: Kotlin, Testes: JUnit 5
+  assert:
+    - type: llm-rubric
+      value: |
+        Cada teste DEVE ter estrutura clara de Arrange-Act-Assert:
+        - Arrange: preparacao dos dados (criar objetos, configurar mocks)
+        - Act: execucao da acao sendo testada (chamada ao metodo)
+        - Assert: verificacao do resultado (assertions)
+        Os blocos podem ter comentarios // Arrange, // Act, // Assert ou estar separados visualmente.
+        NAO deve ter logica condicional (if, for) dentro dos testes.
+        Valores esperados devem ser hardcoded, nao calculados.
+
+- description: "Bug fix - teste reproduz o bug antes do fix"
+  vars:
+    userMessage: |
+      Ja aprovei a ADR. Execute o bug fix: o calculo de IOF esta retornando 2.95 quando deveria retornar 3.08 para 30 dias com valor 1000.
+      Classe existente: IofCalculator com metodo calculate(amount: BigDecimal, days: Int): BigDecimal
+      Linguagem: Kotlin, Testes: JUnit 5
+  assert:
+    - type: llm-rubric
+      value: |
+        Para bug fix, o TDD DEVE:
+        1. PRIMEIRO: Escrever teste que reproduz o bug (com valor esperado correto: 3.08)
+        2. Rodar o teste e confirmar que FALHA (retorna 2.95)
+        3. DEPOIS: Corrigir o codigo minimo
+        4. Rodar o teste e confirmar que PASSA
+        O teste deve ter o valor correto (3.08), NAO o valor com bug (2.95).
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const hasReproduction = lower.includes('reproduz') || lower.includes('falha') || lower.includes('red');
+        const hasCorrectValue = output.includes('3.08');
+        const hasBugValue = output.includes('2.95');
+        const pass = hasReproduction && hasCorrectValue;
+        return { pass, score: pass ? 1 : 0,
+          reason: `Reproduces bug: ${hasReproduction}, Correct value (3.08): ${hasCorrectValue}, Bug value mentioned: ${hasBugValue}` };

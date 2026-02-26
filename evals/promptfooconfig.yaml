@@ -1,0 +1,32 @@
+description: "Avaliacao do sistema de Skills — public-skills"
+
+providers:
+  - id: anthropic:messages:claude-sonnet-4-20250514
+    label: claude-sonnet
+    config:
+      max_tokens: 4096
+      temperature: 0
+
+prompts:
+  - label: "Skills System Prompt"
+    raw: |
+      [
+        {"role": "system", "content": "{{systemPrompt}}"},
+        {"role": "user", "content": "{{userMessage}}"}
+      ]
+
+defaultTest:
+  vars:
+    systemPrompt: file://prompts/system-prompt.txt
+
+tests:
+  - file://tests/skill-activation.yaml
+  - file://tests/pipeline-flow.yaml
+  - file://tests/quality-adr.yaml
+  - file://tests/quality-tdd.yaml
+  - file://tests/quality-readable-code.yaml
+  - file://tests/quality-security.yaml
+  - file://tests/quality-code-review.yaml
+  - file://tests/quality-observability.yaml
+
+outputPath: output/eval-results.json

@@ -1,0 +1,84 @@
+# Testes de Qualidade: Security
+# Verifica se padroes de seguranca sao aplicados corretamente
+# Referencia: skills/security/SKILL.md
+
+- description: "Queries parametrizadas - sem concatenacao"
+  vars:
+    userMessage: |
+      Ja aprovei a ADR e as tarefas. Execute a Tarefa: Criar CreditLimitRepositoryAdapter.
+      Metodos: findByClientId(clientId: ClientId): CreditLimit?
+      Precisa buscar no banco de dados SQL Server pelo clientId.
+      Linguagem: Kotlin, Framework: Spring Boot + JPA
+  assert:
+    - type: llm-rubric
+      value: |
+        O codigo DEVE usar queries parametrizadas:
+        - JPA/JPQL: @Query com parametros nomeados (:clientId) ou method query derivation
+        - SQL nativo: PreparedStatement com ? ou parametros nomeados
+        NAO deve NUNCA concatenar strings para queries:
+        - NAO: "SELECT * FROM ... WHERE id = " + clientId
+        - NAO: "SELECT * FROM ... WHERE id = $clientId"
+        Referencia: skills/security/SKILL.md > OWASP #1 Injection.
+    - type: javascript
+      value: |
+        const codeBlocks = output.match(/```[\s\S]*?```/g) || [];
+        const code = codeBlocks.join('\n');
+        const hasConcatenation = /["']\s*\+\s*\w+|["']\s*\$\{?\w+/.test(code) &&
+          /SELECT|INSERT|UPDATE|DELETE|FROM|WHERE/i.test(code);
+        const hasParameterized = /:clientId|:id|\?|@Param|@Query|findBy/i.test(code);
+        const pass = hasParameterized && !hasConcatenation;
+        return { pass, score: pass ? 1 : 0,
+          reason: `Parameterized: ${hasParameterized}, Concatenation in SQL: ${hasConcatenation}` };
+
+- description: "Response DTO nao expoe dados sensiveis"
+  vars:
+    userMessage: |
+      Ja aprovei a ADR e as tarefas. Execute a Tarefa: Criar ClientController GET /clients/{id}.
+      O Client tem: id, name, email, cpf, phone, address, createdAt.
+      Linguagem: Kotlin, Framework: Spring Boot
+  assert:
+    - type: llm-rubric
+      value: |
+        O Response DTO NAO deve expor dados sensiveis diretamente:
+        - CPF deve ser mascarado (ex: ***.***.***-89) ou omitido
+        - Email pode ser retornado (nao e tao sensivel)
+        - Senha NUNCA deve aparecer
+        O DTO deve ser uma classe separada (nao retornar a Entity/domain diretamente).
+        Deve existir um mapper entre Domain e DTO.
+        Referencia: skills/security/SKILL.md > OWASP #3 Sensitive Data Exposure.
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const hasMasking = lower.includes('mask') || lower.includes('***') || lower.includes('lastdigits') || lower.includes('last4');
+        const hasDto = lower.includes('response') && (lower.includes('dto') || lower.includes('class') || lower.includes('data class'));
+        const hasMapper = lower.includes('mapper') || lower.includes('toresponse') || lower.includes('todto');
+        const pass = hasDto && (hasMasking || hasMapper);
+        return { pass, score: pass ? 1 : 0,
+          reason: `Masking: ${hasMasking}, DTO: ${hasDto}, Mapper: ${hasMapper}` };
+
+- description: "Auth no adapter - actor como parametro do Use Case"
+  vars:
+    userMessage: |
+      Ja aprovei a ADR e as tarefas. Execute a Tarefa: Criar Use Case ApproveProposal.
+      Apenas usuarios com permissao APPROVE_PROPOSAL podem aprovar.
+      Linguagem: Kotlin, Framework: Spring Boot
+  assert:
+    - type: llm-rubric
+      value: |
+        A arquitetura de auth DEVE seguir:
+        1. Autenticacao no Primary Adapter (middleware/filter): valida token, extrai userId
+        2. O Use Case recebe o actor (userId/approvedBy) como PARAMETRO explicito do Command
+        3. Autorizacao de negocio verificada no Use Case (user.hasPermission)
+        4. NAO usar SecurityContext.getCurrentUser() no Use Case (acoplamento global)
+        5. Retornar Result.Unauthorized quando nao autorizado (nao exception)
+        Referencia: skills/security/SKILL.md > Auth na Hexagonal.
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const hasActorParam = lower.includes('approvedby') || lower.includes('actor') || lower.includes('userid');
+        const hasCommand = lower.includes('command');
+        const hasPermission = lower.includes('permission') || lower.includes('authorize') || lower.includes('autoriza');
+        const noGlobalContext = !lower.includes('securitycontext.getcurrentuser');
+        const pass = hasActorParam && hasPermission && noGlobalContext;
+        return { pass, score: pass ? 1 : 0,
+          reason: `Actor param: ${hasActorParam}, Permission: ${hasPermission}, No global context: ${noGlobalContext}` };

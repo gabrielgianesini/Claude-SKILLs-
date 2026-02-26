@@ -1,0 +1,217 @@
+# Testes de Ativacao de Skills
+# Verifica se o Claude ativa as skills corretas com base na intencao do usuario
+# Referencia: CLAUDE.md > Regras de Ativacao
+
+- description: "Feature nova -> ADR + Task Generation"
+  vars:
+    userMessage: "Quero criar uma API de pagamentos com endpoints para criar, consultar e cancelar pagamentos."
+  assert:
+    - type: llm-rubric
+      value: |
+        A resposta deve indicar que vai criar uma ADR (Architecture Decision Record) ANTES de qualquer implementacao.
+        Deve mencionar o pipeline: ADR primeiro, depois tarefas, depois execucao.
+        NAO deve comecar a implementar codigo diretamente.
+        Deve pedir aprovacao do usuario para a ADR antes de prosseguir.
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const hasAdr = lower.includes('adr') || lower.includes('architecture decision record');
+        const hasPipeline = lower.includes('tarefa') || lower.includes('task');
+        const pass = hasAdr && hasPipeline;
+        return { pass, score: pass ? 1 : 0,
+          reason: `ADR: ${hasAdr}, Pipeline: ${hasPipeline}` };
+
+- description: "Bug fix -> ADR simplificada + TDD bug fix"
+  vars:
+    userMessage: "Tem um bug no calculo de IOF. O valor esta sendo calculado errado para periodos de 30 dias. O resultado esperado era 3.08 mas esta retornando 2.95."
+  assert:
+    - type: llm-rubric
+      value: |
+        A resposta deve indicar criacao de uma ADR (pode ser simplificada) para documentar o bug fix.
+        Deve mencionar a abordagem TDD: primeiro escrever um teste que reproduz o bug, depois corrigir.
+        NAO deve pular direto para a correcao sem ADR.
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const hasAdr = lower.includes('adr');
+        const hasTdd = lower.includes('tdd') || lower.includes('teste') || lower.includes('test');
+        const hasBugFlow = lower.includes('reproduz') || lower.includes('bug') || lower.includes('corri');
+        const pass = hasAdr && (hasTdd || hasBugFlow);
+        return { pass, score: pass ? 1 : 0,
+          reason: `ADR: ${hasAdr}, TDD/Bug: ${hasTdd || hasBugFlow}` };
+
+- description: "Refatoracao -> ADR refactoring + Safe Refactoring"
+  vars:
+    userMessage: "Preciso refatorar o modulo de credito. O codigo atual esta com muita duplicacao e a classe CreditCalculator tem mais de 500 linhas."
+  assert:
+    - type: llm-rubric
+      value: |
+        A resposta deve indicar criacao de uma ADR do tipo refactoring.
+        Deve mencionar a skill Safe Refactoring: inventario de testes, refatorar com testes verdes.
+        NAO deve mencionar TDD Workflow (que e para features novas, nao refatoracao).
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const hasAdr = lower.includes('adr');
+        const hasRefactor = lower.includes('refator') || lower.includes('safe refactoring');
+        const pass = hasAdr && hasRefactor;
+        return { pass, score: pass ? 1 : 0,
+          reason: `ADR: ${hasAdr}, Refactoring: ${hasRefactor}` };
+
+- description: "Code review -> Checklist de revisao"
+  vars:
+    userMessage: |
+      Revisa esse codigo:
+
+      class ProposalController {
+        fun create(request: Request): Response {
+          val amount = request.body.amount
+          if (amount < 0) throw IllegalArgumentException("Invalid amount")
+          val proposal = CreditProposal(amount, request.body.clientId, LocalDate.now())
+          proposalRepository.save(proposal)
+          log.info("Proposal created for client " + request.body.clientId)
+          return Response(200, proposal)
+        }
+      }
+  assert:
+    - type: llm-rubric
+      value: |
+        A resposta deve seguir o formato de Code Review com secoes: Violacoes, Pontos positivos, Sugestao.
+        Deve verificar na ordem: Readable Code, DDD, Hexagonal, Erros, Observability, Testes, Security.
+        Deve identificar problemas como: exception para fluxo (deveria ser Result), log com concatenacao (deveria ser structured),
+        dados potencialmente sensiveis logados, falta de validacao no dominio (VO para Money).
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const hasViolations = lower.includes('viola') || lower.includes('problema');
+        const hasFormat = lower.includes('positivo') || lower.includes('sugest');
+        const pass = hasViolations && hasFormat;
+        return { pass, score: pass ? 1 : 0,
+          reason: `Violations: ${hasViolations}, Format: ${hasFormat}` };
+
+- description: "Onde colocar codigo -> Hexagonal"
+  vars:
+    userMessage: "Onde coloco a classe de validacao de CPF? E um adapter ou vai no dominio?"
+  assert:
+    - type: llm-rubric
+      value: |
+        A resposta deve referenciar a arquitetura hexagonal para responder.
+        Deve explicar que validacao de formato (regex) pode ir no Primary Adapter,
+        mas validacao de invariante (CPF valido) deve ser um Value Object no dominio.
+        Deve mencionar a separacao entre camadas (domain vs adapter).
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const hasHexagonal = lower.includes('hexagonal') || lower.includes('adapter') || lower.includes('domain');
+        const hasLayers = lower.includes('camada') || lower.includes('layer') || lower.includes('value object');
+        const pass = hasHexagonal && hasLayers;
+        return { pass, score: pass ? 1 : 0,
+          reason: `Hexagonal: ${hasHexagonal}, Layers: ${hasLayers}` };
+
+- description: "Adicionar logs -> Observability + Hexagonal"
+  vars:
+    userMessage: "Adiciona logs no adapter de scoring. Ele faz chamada para a API externa de score de credito e preciso rastrear as chamadas."
+  assert:
+    - type: llm-rubric
+      value: |
+        A resposta deve seguir os padroes da skill Observability:
+        - Structured logging com key=value (nao concatenacao)
+        - Padrao Entry/Exit/Error no adapter
+        - Correlation ID para rastreabilidade
+        - INFO na entrada, INFO no sucesso, WARN em falha recuperavel, ERROR em falha inesperada
+        Deve respeitar a arquitetura Hexagonal: logs no adapter, nao no dominio.
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const hasStructured = output.includes('={}') || output.includes('key=') || lower.includes('structured');
+        const hasCorrelation = lower.includes('correlation') || lower.includes('correlationid');
+        const hasAdapter = lower.includes('adapter');
+        const pass = hasStructured && hasAdapter;
+        return { pass, score: pass ? 1 : 0,
+          reason: `Structured: ${hasStructured}, Correlation: ${hasCorrelation}, Adapter: ${hasAdapter}` };
+
+- description: "Criar PR -> Skill PR ativada"
+  vars:
+    userMessage: "Cria a PR. O card Jira e PAY-1976 e e uma correcao de bug."
+  assert:
+    - type: llm-rubric
+      value: |
+        A resposta deve seguir a skill PR:
+        - Branch no padrao HOTFIX/PAY-1976 (porque e bug fix)
+        - Titulo com [PAY-1976] no inicio
+        - Descricao usando o template completo (Tipo da Alteracao, Descricao, Changelog, Como Testar, etc.)
+        - Usar gh CLI para criar a PR
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const hasHotfix = lower.includes('hotfix') || lower.includes('hotfix/pay-1976');
+        const hasCard = output.includes('PAY-1976') || output.includes('[PAY-1976]');
+        const hasGh = lower.includes('gh pr') || lower.includes('gh cli');
+        const pass = hasCard && (hasHotfix || hasGh);
+        return { pass, score: pass ? 1 : 0,
+          reason: `Hotfix: ${hasHotfix}, Card: ${hasCard}, GH: ${hasGh}` };
+
+- description: "Escape hatch -> Pipeline simplificado"
+  vars:
+    userMessage: "So faz uma validacao de email, sem cerimonia. Precisa de um Value Object Email que valida formato."
+  assert:
+    - type: llm-rubric
+      value: |
+        A resposta deve ativar o pipeline simplificado (escape hatch):
+        - ADR minima inline (contexto + decisao em poucas linhas, NAO template completo)
+        - Lista de tarefas inline (titulo + testes esperados)
+        - Pedir confirmacao UMA VEZ para tudo
+        - Manter TDD (teste antes do codigo)
+        NAO deve criar ADR completa com template formal.
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const hasSimplified = lower.includes('simplificad') || lower.includes('inline') || lower.includes('direto');
+        const hasTdd = lower.includes('teste') || lower.includes('tdd') || lower.includes('should');
+        const pass = hasSimplified || hasTdd;
+        return { pass, score: pass ? 1 : 0,
+          reason: `Simplified: ${hasSimplified}, TDD: ${hasTdd}` };
+
+- description: "Seguranca -> Security + Hexagonal"
+  vars:
+    userMessage: "Preciso implementar a validacao do input do formulario de cadastro de clientes. Os campos sao: nome, email, CPF, telefone e endereco."
+  assert:
+    - type: llm-rubric
+      value: |
+        A resposta deve ativar a skill Security junto com Hexagonal:
+        - Validacao na fronteira (Primary Adapter): formato, tipo, tamanho
+        - Value Objects no dominio para invariantes (Email, CPF)
+        - Mencionar sanitizacao de input
+        - Dados sensiveis (CPF) devem ser tratados com cuidado (masking em logs)
+        - Seguir pipeline ADR primeiro
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const hasSecurity = lower.includes('segur') || lower.includes('security') || lower.includes('valid');
+        const hasSensitive = lower.includes('cpf') || lower.includes('sensiv') || lower.includes('mask');
+        const hasLayers = lower.includes('adapter') || lower.includes('domain') || lower.includes('value object');
+        const pass = hasSecurity && hasLayers;
+        return { pass, score: pass ? 1 : 0,
+          reason: `Security: ${hasSecurity}, Sensitive: ${hasSensitive}, Layers: ${hasLayers}` };
+
+- description: "Modelagem -> ADR + DDD + Readable Code"
+  vars:
+    userMessage: "Modela a entidade de Proposta de Credito. Ela tem valor solicitado, prazo em meses, taxa de juros, status (pendente, aprovada, rejeitada) e data de criacao."
+  assert:
+    - type: llm-rubric
+      value: |
+        A resposta deve seguir o pipeline ADR primeiro, e depois usar DDD para modelar:
+        - Value Objects para Money (valor), prazo, taxa
+        - Entity CreditProposal com comportamento (nao apenas dados)
+        - Status como enum ou sealed class
+        - Seguir Readable Code: sem numeros magicos, nomes descritivos
+        Deve criar ADR antes de implementar.
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const hasAdr = lower.includes('adr');
+        const hasDdd = lower.includes('value object') || lower.includes('entity') || lower.includes('entidade');
+        const hasModeling = lower.includes('money') || lower.includes('status') || lower.includes('proposta');
+        const pass = hasAdr && (hasDdd || hasModeling);
+        return { pass, score: pass ? 1 : 0,
+          reason: `ADR: ${hasAdr}, DDD: ${hasDdd}, Modeling: ${hasModeling}` };

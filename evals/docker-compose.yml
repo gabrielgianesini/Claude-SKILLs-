@@ -1,0 +1,24 @@
+services:
+  promptfoo:
+    image: ghcr.io/promptfoo/promptfoo:latest
+    volumes:
+      - ./:/app/evals
+      - ../skills:/app/skills:ro
+      - ../CLAUDE.md:/app/CLAUDE.md:ro
+    working_dir: /app/evals
+    env_file:
+      - .env
+    command: ["promptfoo", "eval", "--config", "promptfooconfig.yaml"]
+
+  promptfoo-ui:
+    image: ghcr.io/promptfoo/promptfoo:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/app/evals
+    working_dir: /app/evals
+    env_file:
+      - .env
+    command: ["promptfoo", "view", "--port", "3000", "--yes"]
+    profiles:
+      - ui

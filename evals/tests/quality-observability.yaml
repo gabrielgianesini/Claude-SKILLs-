@@ -1,0 +1,86 @@
+# Testes de Qualidade: Observability
+# Verifica se logging segue os padroes definidos na skill
+# Referencia: skills/observability/SKILL.md
+
+- description: "Adapter usa structured logging com key=value"
+  vars:
+    userMessage: |
+      Ja aprovei a ADR e as tarefas. Execute a Tarefa: Criar ScoringApiAdapter que implementa ScoringPort.
+      O adapter chama uma API REST externa POST /scoring/evaluate com o clientId.
+      Retorna ScoringResult com score (Int) e status (String).
+      Deve seguir padrao Entry/Exit/Error de logging.
+      Linguagem: Kotlin, Framework: Spring Boot
+  assert:
+    - type: llm-rubric
+      value: |
+        O adapter DEVE seguir o padrao de logging:
+        1. ENTRY (INFO): log ao iniciar a chamada com clientId
+        2. EXIT sucesso (INFO): log com resultado (score, status)
+        3. EXIT falha recuperavel (WARN): timeout, retry
+        4. EXIT falha inesperada (ERROR): exception com stack trace
+        O logging DEVE ser structured com key=value:
+        - CORRETO: log.info("Calling scoring API clientId={}", clientId)
+        - ERRADO: log.info("Calling scoring API: " + clientId)
+        NAO deve usar concatenacao de strings.
+    - type: javascript
+      value: |
+        const codeBlocks = output.match(/```[\s\S]*?```/g) || [];
+        const code = codeBlocks.join('\n');
+        const hasStructured = /=\{\}|=\$\{|clientId=|score=|status=/i.test(code);
+        const hasConcatenation = /log\.\w+\([^)]*\+\s*\w+/i.test(code);
+        const hasEntryExit = /log\.info.*[Cc]alling|log\.info.*respond|log\.warn.*timeout|log\.error/i.test(code);
+        const pass = hasStructured && hasEntryExit && !hasConcatenation;
+        return { pass, score: pass ? 1 : 0,
+          reason: `Structured: ${hasStructured}, Entry/Exit: ${hasEntryExit}, Concatenation: ${hasConcatenation}` };
+
+- description: "Dominio NAO loga - retorna Result/Event"
+  vars:
+    userMessage: |
+      Ja aprovei a ADR e as tarefas. Execute a Tarefa: Criar Entity CreditProposal com metodo approve().
+      Regras: so pode aprovar se status for PENDING. Se ja estiver APPROVED ou REJECTED, retorna erro.
+      Linguagem: Kotlin
+  assert:
+    - type: llm-rubric
+      value: |
+        A Entity de dominio NAO DEVE conter nenhum log:
+        - NAO: log.info(...), logger.info(...), println(...)
+        - Deve retornar Result (Success/Error) ou emitir Domain Event
+        - O adapter que chama a entity e que decide se loga o resultado
+        Referencia: skills/observability/SKILL.md > Dominio e SILENCIOSO.
+    - type: javascript
+      value: |
+        const codeBlocks = output.match(/```[\s\S]*?```/g) || [];
+        const code = codeBlocks.join('\n');
+        const entityCode = code.split(/class\s+\w+Controller|class\s+\w+Adapter|class\s+\w+UseCase/i)[0] || code;
+        const hasLog = /log\.\w+\(|logger\.\w+\(|println\(|print\(/i.test(entityCode);
+        const hasResult = /Result|sealed|Success|Error|Event/i.test(entityCode);
+        const pass = !hasLog && hasResult;
+        return { pass, score: pass ? 1 : 0,
+          reason: `Domain has log: ${hasLog}, Domain has Result/Event: ${hasResult}` };
+
+- description: "Correlation ID presente em chamadas externas"
+  vars:
+    userMessage: |
+      Ja aprovei a ADR e as tarefas. Execute a Tarefa: Criar CorrelationIdFilter para interceptar requests HTTP.
+      Deve extrair X-Correlation-Id do header ou gerar um novo UUID.
+      Deve colocar no MDC para aparecer em todos os logs.
+      Linguagem: Kotlin, Framework: Spring Boot
+  assert:
+    - type: llm-rubric
+      value: |
+        O CorrelationIdFilter DEVE:
+        1. Extrair o header X-Correlation-Id do request (ou gerar UUID se ausente)
+        2. Colocar no MDC (Mapped Diagnostic Context) do SLF4J
+        3. Setar o header na response para propagacao
+        4. Limpar o MDC no finally (evitar vazamento entre requests)
+        Deve usar MDC.put() e MDC.clear() corretamente.
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const hasMdc = lower.includes('mdc.put') || lower.includes('mdc');
+        const hasHeader = lower.includes('x-correlation-id') || lower.includes('correlation');
+        const hasUuid = lower.includes('uuid') || lower.includes('generateuuid') || lower.includes('randomuuid');
+        const hasCleanup = lower.includes('mdc.clear') || lower.includes('finally');
+        const count = [hasMdc, hasHeader, hasUuid, hasCleanup].filter(Boolean).length;
+        return { pass: count >= 3, score: count / 4,
+          reason: `MDC: ${hasMdc}, Header: ${hasHeader}, UUID: ${hasUuid}, Cleanup: ${hasCleanup}` };

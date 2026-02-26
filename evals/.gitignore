@@ -1,0 +1,5 @@
+.env
+output/
+*.cache
+promptfoo-output/
+prompts/system-prompt.txt

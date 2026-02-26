@@ -1,0 +1,82 @@
+# Testes de Qualidade: ADR segue template
+# Verifica se ADRs geradas seguem os padroes definidos na skill ADR
+# Referencia: skills/adr/SKILL.md
+
+- description: "ADR de Feature contem todas as secoes obrigatorias"
+  vars:
+    userMessage: "Criar feature de simulacao de credito. O cliente informa valor e prazo, o sistema calcula parcelas mensais com juros compostos e retorna o resultado."
+  assert:
+    - type: llm-rubric
+      value: |
+        A ADR gerada DEVE conter as seguintes secoes (template Feature Nova):
+        1. Contexto - por que esta mudanca e necessaria
+        2. Decisao - o que sera feito
+        3. Design Tecnico - entidades, VOs, services, ports
+        4. Regras de Negocio - regras do dominio
+        5. Casos de Teste Esperados - cenarios de teste
+        A ADR deve estar em formato markdown com headers ##.
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const sections = ['contexto', 'decis', 'design', 'regra', 'teste'];
+        const found = sections.filter(s => lower.includes(s));
+        return { pass: found.length >= 4, score: found.length / sections.length,
+          reason: `Sections found: ${found.join(', ')} (${found.length}/${sections.length})` };
+
+- description: "ADR de Bug Fix contem secoes especificas"
+  vars:
+    userMessage: "Bug: o calculo de IOF esta retornando 2.95 quando deveria retornar 3.08 para periodos de 30 dias com valor de 1000 reais."
+  assert:
+    - type: llm-rubric
+      value: |
+        A ADR de bug fix DEVE conter:
+        1. Problema - descricao do bug com valores esperados vs reais
+        2. Causa Raiz - analise de por que o bug ocorre (ou hipotese)
+        3. Correcao Proposta - o que sera alterado
+        4. Testes - cenarios que validam a correcao
+        NAO precisa de "Alternativas Consideradas" como na ADR de feature.
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const hasProblem = lower.includes('problema') || lower.includes('bug');
+        const hasCause = lower.includes('causa') || lower.includes('raiz') || lower.includes('motivo');
+        const hasFix = lower.includes('corre') || lower.includes('fix') || lower.includes('solu');
+        const hasTests = lower.includes('teste') || lower.includes('test');
+        const count = [hasProblem, hasCause, hasFix, hasTests].filter(Boolean).length;
+        return { pass: count >= 3, score: count / 4,
+          reason: `Problem: ${hasProblem}, Cause: ${hasCause}, Fix: ${hasFix}, Tests: ${hasTests}` };
+
+- description: "ADR de Refactoring contem codigo atual vs proposto"
+  vars:
+    userMessage: "Refatorar o CreditCalculator. Hoje ele tem 500 linhas com muita duplicacao. A logica de calculo de juros e IOF esta misturada."
+  assert:
+    - type: llm-rubric
+      value: |
+        A ADR de refactoring DEVE conter:
+        1. Codigo Atual - descricao dos problemas no codigo existente
+        2. Problemas Identificados - duplicacao, acoplamento, etc.
+        3. Codigo Proposto - como ficara apos refatoracao
+        4. Estrategia - abordagem Safe Refactoring (inventario de testes primeiro)
+        Deve mencionar que a refatoracao sera feita com Safe Refactoring (nao TDD).
+
+- description: "ADR com seguranca quando input externo"
+  vars:
+    userMessage: "Criar endpoint POST /clients para cadastro de clientes. Campos: nome, email, CPF, telefone. O CPF precisa ser validado."
+  assert:
+    - type: llm-rubric
+      value: |
+        Como a feature lida com input externo e dados sensiveis (CPF),
+        a ADR DEVE incluir uma secao de Seguranca contendo:
+        - Inputs externos e como serao validados
+        - Dados sensiveis envolvidos (CPF) e como serao protegidos
+        - Autenticacao/Autorizacao se aplicavel
+        Referencia: skills/adr/SKILL.md > Secao Seguranca.
+    - type: javascript
+      value: |
+        const lower = output.toLowerCase();
+        const hasSecurity = lower.includes('seguran') || lower.includes('security');
+        const hasValidation = lower.includes('valid') && lower.includes('cpf');
+        const hasSensitive = lower.includes('sensiv') || lower.includes('mask') || lower.includes('proteg');
+        const pass = hasSecurity || (hasValidation && hasSensitive);
+        return { pass, score: pass ? 1 : 0,
+          reason: `Security section: ${hasSecurity}, Validation: ${hasValidation}, Sensitive: ${hasSensitive}` };
