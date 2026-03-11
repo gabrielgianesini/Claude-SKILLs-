@@ -1,237 +1,273 @@
-# CLAUDE.md — Configuração Global de Desenvolvimento
+# CLAUDE.md — Configuracao Global de Desenvolvimento
 
 ## Contexto do Projeto
 
-> Preencha com os dados reais do projeto. O Claude usa isto para tomar decisões.
+> Preencha com os dados reais do projeto. O Claude usa isto para tomar decisoes.
 
 - **Linguagem:** [ex: Kotlin, Java, TypeScript, C#, Go]
 - **Framework:** [ex: Spring Boot, NestJS, ASP.NET, Gin]
 - **Arquitetura:** Hexagonal (Ports & Adapters)
-- **Paradigma de domínio:** Domain-Driven Design
+- **Paradigma de dominio:** Domain-Driven Design
 - **Build:** [ex: Gradle, Maven, npm, dotnet]
 - **Testes:** [ex: JUnit 5 + MockK, Jest, xUnit, GoTest]
 
-> **Se os campos acima não estiverem preenchidos**, Claude deve:
-> 1. Perguntar ao usuário qual linguagem e framework do projeto
+> **Se os campos acima nao estiverem preenchidos**, Claude deve:
+> 1. Perguntar ao usuario qual linguagem e framework do projeto
 > 2. Ou inferir dos arquivos do projeto (`package.json`, `build.gradle`, `pom.xml`, `go.mod`, `*.csproj`)
-> 3. Adaptar exemplos e implementações à linguagem detectada
+> 3. Adaptar exemplos e implementacoes a linguagem detectada
 
 ---
 
-## Regras de Comunicação
+## Regras de Comunicacao
 
 1. **Objetividade:** Respostas curtas e diretas.
 2. **Escopo estrito:** Responda/execute apenas o que foi pedido.
-3. **Dúvida:** Pergunte antes de implementar se houver ambiguidade.
-4. **Idioma:** Responda no mesmo idioma do usuário.
-5. **Formato de código:** Sempre inclua o caminho completo do arquivo como comentário na primeira linha.
-6. **Linguagem do projeto:** Use a linguagem definida em "Contexto do Projeto" para todos os exemplos e implementações.
+3. **Duvida:** Pergunte antes de implementar se houver ambiguidade.
+4. **Idioma:** Responda no mesmo idioma do usuario.
+5. **Formato de codigo:** Sempre inclua o caminho completo do arquivo como comentario na primeira linha.
+6. **Linguagem do projeto:** Use a linguagem definida em "Contexto do Projeto" para todos os exemplos e implementacoes.
 
 ---
 
-## Skills e Ativação
+## Auto-Skills (OBRIGATORIO)
+
+Antes de responder qualquer pedido de codigo, VERIFIQUE se o pedido ativa alguma skill.
+Skills estao em `skills/`. O hook `hooks/auto-skill-loader.sh` injeta automaticamente
+as skills relevantes. Caso o hook nao tenha injetado, carregue manualmente via Read.
+
+### Skills P0 — Sempre Ativas
+Estas regras se aplicam a TODO codigo que voce escrever:
+
+**readable-code**: Codigo explicito, sem magic numbers, sem syntax sugar, sem functional patterns.
+Loops imperativos, variaveis intermediarias nomeadas, Result pattern para erros.
+
+**verification-before-completion**: NUNCA diga "pronto", "funciona", "testes passam" sem
+ter executado o comando de verificacao E colado o output. Evidencia antes de claims.
+
+**defense-in-depth**: Ao corrigir bugs, valide em TODAS as camadas (entry, business, env, debug).
+
+### Skills P1-P2 — Sob Demanda
+Se o hook nao injetou mas o contexto pede, carregue com Read:
+
+| Contexto | Skill |
+|----------|-------|
+| Implementar/criar | skills/tdd-workflow/SKILL.md |
+| Refatorar | skills/safe-refactoring/SKILL.md |
+| Decisao arquitetural | skills/adr/SKILL.md |
+| Decompor em tarefas | skills/task-generation/SKILL.md |
+| Criar PR | skills/pr/SKILL.md |
+| Debug/erro/bug | skills/systematic-debugging/SKILL.md |
+| Seguranca | skills/security/SKILL.md |
+| Estrutura de camadas | skills/hexagonal-architecture/SKILL.md |
+| Modelagem dominio | skills/ddd-patterns/SKILL.md |
+| Logging/metricas | skills/observability/SKILL.md |
+| Receber code review | skills/receiving-code-review/SKILL.md |
+| Brainstorm/design | skills/brainstorming/SKILL.md |
+| Anti-patterns de teste | skills/testing-anti-patterns/SKILL.md |
+| Agentes paralelos | skills/dispatching-parallel-agents/SKILL.md |
+| Finalizar branch | skills/finishing-a-development-branch/SKILL.md |
+
+---
+
+## Skills e Ativacao — Tabela Completa
 
 | Skill | Arquivo | Prioridade |
 |-------|---------|------------|
-| ADR | `skills/adr/SKILL.md` | P0 — Antes de qualquer código |
-| Task Generation | `skills/task-generation/SKILL.md` | P0 — Após ADR aprovada |
-| Readable Code | `skills/readable-code/SKILL.md` | P0 — Sempre ativa no código |
+| ADR | `skills/adr/SKILL.md` | P0 — Antes de qualquer codigo |
+| Task Generation | `skills/task-generation/SKILL.md` | P0 — Apos ADR aprovada |
+| Readable Code | `skills/readable-code/SKILL.md` | P0 — Sempre ativa no codigo |
+| Verification | `skills/verification-before-completion/SKILL.md` | P0 — Antes de claims |
+| Defense-in-Depth | `skills/defense-in-depth/SKILL.md` | P0 — Correcao de bugs |
+| Root Cause Tracing | `skills/root-cause-tracing/SKILL.md` | P0 — Sub-skill de debugging |
 | TDD Workflow | `skills/tdd-workflow/SKILL.md` | P1 — Features e bugs |
-| Safe Refactoring | `skills/safe-refactoring/SKILL.md` | P1 — Refatorações |
-| PR | `skills/pr/SKILL.md` | P1 — Criação de branches e PRs |
+| Safe Refactoring | `skills/safe-refactoring/SKILL.md` | P1 — Refatoracoes |
+| PR | `skills/pr/SKILL.md` | P1 — Criacao de branches e PRs |
+| Security | `skills/security/SKILL.md` | P1 — Input, auth, dados sensiveis |
+| Systematic Debugging | `skills/systematic-debugging/SKILL.md` | P1 — Investigacao de bugs |
+| Receiving Code Review | `skills/receiving-code-review/SKILL.md` | P1 — Receber feedback |
 | DDD Patterns | `skills/ddd-patterns/SKILL.md` | P2 — Modelagem |
 | Hexagonal Arch | `skills/hexagonal-architecture/SKILL.md` | P2 — Estrutura |
-| Observability | `skills/observability/SKILL.md` | P2 — Logs e métricas |
-| Security | `skills/security/SKILL.md` | P1 — Input, auth, dados sensíveis |
+| Observability | `skills/observability/SKILL.md` | P2 — Logs e metricas |
+| Brainstorming | `skills/brainstorming/SKILL.md` | P2 — Design de ideias |
+| Testing Anti-Patterns | `skills/testing-anti-patterns/SKILL.md` | P2 — Qualidade de testes |
+| Dispatching Agents | `skills/dispatching-parallel-agents/SKILL.md` | P2 — Paralelismo |
+| Finishing Branch | `skills/finishing-a-development-branch/SKILL.md` | P2 — Finalizar trabalho |
 
-### Regras de Ativação
+### Regras de Ativacao
 
-Ative skills com base na **intenção**, não em palavras isoladas:
+Ative skills com base na **intencao**, nao em palavras isoladas:
 
-| Intenção do Usuário | Skills Ativadas (em ordem) |
-|----------------------|---------------------------|
+| Intencao do Usuario | Skills Ativadas (em ordem) |
+|---------------------|---------------------------|
 | Criar/implementar feature nova | ADR → Task Generation → (por tarefa: Readable Code + TDD + DDD + Hexagonal) |
-| Corrigir bug | ADR (simplificada) → Task Generation → (por tarefa: Readable Code + TDD bug fix) |
-| Refatorar código existente | ADR (refactoring) → Task Generation → (por tarefa: Readable Code + Safe Refactoring) |
-| Modelar domínio/entidades | ADR → DDD + Readable Code |
-| Decidir onde colocar código | Hexagonal |
+| Corrigir bug | Systematic Debugging → ADR (simplificada) → TDD bug fix |
+| Refatorar codigo existente | ADR (refactoring) → Task Generation → Safe Refactoring |
+| Modelar dominio/entidades | ADR → DDD + Readable Code |
+| Decidir onde colocar codigo | Hexagonal |
 | Adicionar logs/monitoramento | Observability + Hexagonal |
-| Lidar com input externo, auth, dados sensíveis | Security + Hexagonal |
+| Lidar com input externo, auth, dados sensiveis | Security + Hexagonal |
 | Criar PR / abrir pull request | PR |
-| Revisar código existente | Code Review (ver seção abaixo) |
-| Entender código existente | Análise (ver seção abaixo) |
+| Receber feedback de code review | Receiving Code Review |
+| Explorar ideias / design | Brainstorming |
+| Finalizar branch | Verification → Finishing Branch |
 
-### Resolução de Conflitos
+### Resolucao de Conflitos
 
-Se duas skills dão instruções opostas:
-1. **ADR vence** em questões de escopo e decisão ("o quê" e "por quê").
-2. **Readable Code vence** em questões de sintaxe e legibilidade.
-3. **DDD vence** em questões de modelagem e nomenclatura.
-4. **Hexagonal vence** em questões de localização de código.
-5. **Na dúvida**, pergunte ao usuário.
+Se duas skills dao instrucoes opostas:
+1. **ADR vence** em questoes de escopo e decisao ("o que" e "por que").
+2. **Readable Code vence** em questoes de sintaxe e legibilidade.
+3. **DDD vence** em questoes de modelagem e nomenclatura.
+4. **Hexagonal vence** em questoes de localizacao de codigo.
+5. **Na duvida**, pergunte ao usuario.
 
 ---
 
-## Fluxo de Trabalho Obrigatório
+## Fluxo de Trabalho Obrigatorio
 
-### Pipeline Completo (Features, Bugs, Refatorações)
+### Pipeline Completo (Features, Bugs, Refatoracoes)
 
 ```
 ┌─────────────┐     ┌──────────────────┐     ┌─────────────────────────┐
-│  1. ADR      │ ──→ │  2. Tarefas       │ ──→ │  3. Execução por tarefa │
-│  (aprovação) │     │  (aprovação)      │     │  (TDD ou Safe Refactor) │
+│  1. ADR      │ ──→ │  2. Tarefas       │ ──→ │  3. Execucao por tarefa │
+│  (aprovacao) │     │  (aprovacao)      │     │  (TDD ou Safe Refactor) │
 └─────────────┘     └──────────────────┘     └─────────────────────────┘
 ```
 
-**Cada transição exige aprovação explícita do usuário.**
+**Cada transicao exige aprovacao explicita do usuario.**
 
 ### Detalhamento
 
 ```
 1. PLANEJAR
    a. Criar ADR (template: feature, bug ou refactoring)
-   b. Esperar aprovação do usuário
+   b. Esperar aprovacao do usuario
 
 2. DECOMPOR
    a. Gerar tarefas a partir da ADR aprovada
-   b. Ordem inside-out (domínio → aplicação → infraestrutura)
-   c. Esperar aprovação do usuário
+   b. Ordem inside-out (dominio → aplicacao → infraestrutura)
+   c. Esperar aprovacao do usuario
 
 3. EXECUTAR (por tarefa, uma de cada vez)
    a. Anunciar: "Iniciando Tarefa [N]/[Total]"
    b. Ativar skill correta (TDD ou Safe Refactoring)
    c. Aplicar Readable Code + DDD + Hexagonal + Observability
-   d. Concluir: "Tarefa [N] concluída. Iniciar próxima?"
-   e. Esperar confirmação
+   d. Concluir: "Tarefa [N] concluida. Iniciar proxima?"
+   e. Esperar confirmacao
 ```
 
 ### Escape Hatch — Pipeline Simplificado
 
-Se o usuário indicar urgência ou pedir execução direta ("só faz", "direto", "sem cerimônia", "rápido"):
+Se o usuario indicar urgencia ou pedir execucao direta ("so faz", "direto", "sem cerimonia", "rapido"):
 
 ```
 Pipeline simplificado:
-1. Claude cria ADR mínima INLINE (contexto + decisão + regras em ≤ 10 linhas)
-2. Claude lista tarefas INLINE (sem template completo, só título + testes esperados)
-3. Pede confirmação UMA VEZ para tudo
+1. Claude cria ADR minima INLINE (contexto + decisao + regras em ≤ 10 linhas)
+2. Claude lista tarefas INLINE (sem template completo, so titulo + testes esperados)
+3. Pede confirmacao UMA VEZ para tudo
 4. Executa com TDD normalmente
 ```
 
-**O que NÃO pode ser pulado mesmo no escape hatch:**
+**O que NAO pode ser pulado mesmo no escape hatch:**
 - Readable Code (sempre ativo)
-- Testes antes do código (TDD)
+- Testes antes do codigo (TDD)
 - Result Pattern para erros
 
-### Exceções (sem ADR, sem tarefas)
+### Excecoes (sem ADR, sem tarefas)
 
-| Situação | O que fazer |
+| Situacao | O que fazer |
 |----------|-------------|
-| Renomear variável / fix de typo | Executar direto |
+| Renomear variavel / fix de typo | Executar direto |
 | Pergunta sobre arquitetura | Responder direto |
-| Atualizar dependência sem breaking change | Executar direto |
-| Explicar conceito / entender código | Responder direto |
+| Atualizar dependencia sem breaking change | Executar direto |
+| Explicar conceito / entender codigo | Responder direto |
 
 ---
 
 ## Code Review
 
-Quando o usuário pede para revisar código ("revisa", "review", "olha esse código", "o que acha"):
+Quando o usuario pede para revisar codigo ("revisa", "review", "olha esse codigo", "o que acha"):
 
-**Claude analisa na seguinte ordem e reporta apenas violações encontradas:**
+**Claude analisa na seguinte ordem e reporta apenas violacoes encontradas:**
 
-| # | Verificação | Skill Referência |
+| # | Verificacao | Skill Referencia |
 |---|-------------|-----------------|
-| 1 | Readable Code: números mágicos, operator overloading, syntax sugar, nomes | readable-code |
-| 2 | DDD: entidade sem comportamento, VO mutável, lógica fora do domínio | ddd-patterns |
-| 3 | Hexagonal: domínio importando framework, regra no controller, ORM no domínio | hexagonal-architecture |
+| 1 | Readable Code: numeros magicos, operator overloading, syntax sugar, nomes | readable-code |
+| 2 | DDD: entidade sem comportamento, VO mutavel, logica fora do dominio | ddd-patterns |
+| 3 | Hexagonal: dominio importando framework, regra no controller, ORM no dominio | hexagonal-architecture |
 | 4 | Erros: exception para fluxo em vez de Result, erros engolidos | readable-code + hexagonal |
-| 5 | Observability: log no domínio, dados sensíveis logados, falta correlation ID | observability |
-| 6 | Testes: lógica no teste, múltiplos conceitos, falta de cenários de borda | tdd-workflow |
-| 7 | Security: input não validado, secrets hardcoded, SQL concatenado, mass assignment | security |
+| 5 | Observability: log no dominio, dados sensiveis logados, falta correlation ID | observability |
+| 6 | Testes: logica no teste, multiplos conceitos, falta de cenarios de borda | tdd-workflow |
+| 7 | Security: input nao validado, secrets hardcoded, SQL concatenado, mass assignment | security |
 
 **Formato de resposta:**
 
 ```
-### 🔍 Code Review
+### Code Review
 
 **Arquivo:** [caminho]
 
-#### Violações
+#### Violacoes
 1. [Regra violada] — [linha ou trecho] — [como corrigir]
 2. ...
 
 #### Pontos positivos
-- [o que está bom]
+- [o que esta bom]
 
-#### Sugestão
-[ação recomendada: corrigir direto, criar ADR para refatorar, ou aceitar como está]
+#### Sugestao
+[acao recomendada: corrigir direto, criar ADR para refatorar, ou aceitar como esta]
 ```
 
 ---
 
-## Análise de Código Existente
+## Analise de Codigo Existente
 
-Quando o usuário cola código e pede para entender ("explica", "o que faz", "como funciona"):
+Quando o usuario cola codigo e pede para entender ("explica", "o que faz", "como funciona"):
 
 **Claude deve:**
-1. Explicar o que o código faz em linguagem simples (1-3 parágrafos)
+1. Explicar o que o codigo faz em linguagem simples (1-3 paragrafos)
 2. Identificar em qual camada da arquitetura ele se encaixa
-3. Apontar padrões DDD presentes (entity, VO, service, etc.)
-4. **NÃO sugerir melhorias a menos que o usuário peça** — o objetivo é entender, não modificar
+3. Apontar padroes DDD presentes (entity, VO, service, etc.)
+4. **NAO sugerir melhorias a menos que o usuario peca** — o objetivo e entender, nao modificar
 
 ---
 
-## Convenções de Projeto
+## Convencoes de Projeto
 
 ### Nomes de Arquivo
 
-| Tipo | Convenção | Exemplo |
+| Tipo | Convencao | Exemplo |
 |------|-----------|---------|
 | Classes / Tipos | PascalCase | `CreditProposal`, `MoneyTest` |
-| Arquivos de código | Seguir padrão da linguagem | Kotlin/Java: `CreditProposal.kt` — TS: `credit-proposal.ts` — Go: `credit_proposal.go` |
-| Diretórios | kebab-case ou lowercase | `credit/model/`, `rest-server/` |
+| Arquivos de codigo | Seguir padrao da linguagem | Kotlin/Java: `CreditProposal.kt` — TS: `credit-proposal.ts` — Go: `credit_proposal.go` |
+| Diretorios | kebab-case ou lowercase | `credit/model/`, `rest-server/` |
 | Arquivos de config | kebab-case | `app-config.yml`, `feature-toggles.json` |
 | ADRs | `ADR-NNN-titulo-descritivo.md` | `ADR-001-criar-simulacao-credito.md` |
 | Testes | Mesmo nome + sufixo Test | `CreditProposalTest`, `MoneyTest` |
 
-**Regra:** Seguir a convenção dominante da linguagem do projeto. Se o projeto já tem padrão estabelecido, manter consistência com o existente.
+**Regra:** Seguir a convencao dominante da linguagem do projeto. Se o projeto ja tem padrao estabelecido, manter consistencia com o existente.
 
 ### Commits
 
-Cada tarefa concluída = um commit. Formato:
+Cada tarefa concluida = um commit. Formato:
 
 ```
-[tipo]: [descrição curta]
+[tipo]: [descricao curta]
 
 Refs: ADR-NNN, Tarefa N/Total
 
 tipo:
   feat     → feature nova
   fix      → bug fix
-  refactor → refatoração
+  refactor → refatoracao
   test     → apenas testes
-  docs     → documentação
-  chore    → config, build, dependências
-```
-
-**Exemplos:**
-```
-feat: create Money value object with add and subtract
-
-Refs: ADR-001, Tarefa 1/7
-```
-
-```
-fix: correct IOF calculation for 30-day period
-
-Refs: ADR-003, Tarefa 2/2
+  docs     → documentacao
+  chore    → config, build, dependencias
 ```
 
 **Regras:**
-- Mensagem em inglês (convenção de mercado) ou seguir padrão existente do projeto
 - Primeira linha ≤ 72 caracteres
-- Referência à ADR e tarefa no corpo
-- Um commit por tarefa (atômico e revertível)
+- Referencia a ADR e tarefa no corpo
+- Um commit por tarefa (atomico e revertivel)
 
 ### Branches
 
@@ -245,29 +281,16 @@ Exemplos:
   refactor/ADR-005-new-financial-calculator
 ```
 
-#### Branches para PR → master
-Seguir regras da skill `skills/pr/SKILL.md` (padrão `RELEASE/CARD-JIRA` ou `HOTFIX/CARD-JIRA`).
-
-#### Ciclo de Vida da Branch
-1. Criar branch de trabalho: `feat/ADR-001-simulacao-credito`
-2. Desenvolver com commits atômicos (1 por tarefa)
-3. Quando pronto para PR, renomear para padrão PR: `RELEASE/CARD-JIRA` ou `HOTFIX/CARD-JIRA`
-4. Criar PR via skill PR
-
-Ou, se o card Jira já é conhecido desde o início:
-1. Criar branch direto no padrão PR: `RELEASE/CARD-JIRA`
-2. Desenvolver normalmente com commits atômicos
-
 ---
 
 ## Readable Code (Sempre Ativo — Resumo)
 
-Regras completas em `skills/readable-code/SKILL.md`. Resumo para referência rápida:
+Regras completas em `skills/readable-code/SKILL.md`. Resumo para referencia rapida:
 
-- Zero números mágicos → constantes nomeadas.
-- Sem operator overloading → métodos explícitos (`.add()`, `.multiply()`).
-- Sem funções funcionais → `for` loops em vez de `map`, `filter`, `fold`.
-- Sem syntax sugar → formas explícitas da linguagem.
+- Zero numeros magicos → constantes nomeadas.
+- Sem operator overloading → metodos explicitos (`.add()`, `.multiply()`).
+- Sem funcoes funcionais → `for` loops em vez de `map`, `filter`, `fold`.
+- Sem syntax sugar → formas explicitas da linguagem.
 - Pattern matching (`when`, `match`, `switch`) → permitido para Result types e enums.
-- Variáveis intermediárias → decompor expressões complexas.
-- Result Pattern → tipos explícitos para erros esperados, sem exceptions para fluxo.
+- Variaveis intermediarias → decompor expressoes complexas.
+- Result Pattern → tipos explicitos para erros esperados, sem exceptions para fluxo.

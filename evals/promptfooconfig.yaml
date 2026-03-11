@@ -1,19 +1,25 @@
 description: "Avaliacao do sistema de Skills — public-skills"
 
 providers:
-  - id: anthropic:messages:claude-sonnet-4-20250514
-    label: claude-sonnet
+  - id: google:gemini-2.5-flash
+    label: gemini-2.5-flash
     config:
-      max_tokens: 4096
-      temperature: 0
+      systemInstruction: file://prompts/system-prompt.txt
+      generationConfig:
+        maxOutputTokens: 4096
+        temperature: 0
+
+defaultEval:
+  options:
+    provider:
+      id: google:gemini-2.5-flash
+      config:
+        generationConfig:
+          maxOutputTokens: 1024
+          temperature: 0
 
 prompts:
-  - label: "Skills System Prompt"
-    raw: |
-      [
-        {"role": "system", "content": "{{systemPrompt}}"},
-        {"role": "user", "content": "{{userMessage}}"}
-      ]
+  - "{{userMessage}}"
 
 defaultTest:
   vars:

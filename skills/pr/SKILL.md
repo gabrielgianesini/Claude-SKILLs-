@@ -126,11 +126,9 @@ HOTFIX/PAY-1976   # correção crítica
 ## Anexos
 
 ## Guias
-[Guia para escrita de Pull Requests](https://www.notion.so/kaminoteam/Guia-para-Escrita-de-Pull-Requests-1365352e646e80cc99bee99712c67cc5)
-
-[Guia para escrita de comentários](https://www.notion.so/kaminoteam/Guia-para-escrita-de-Coment-rios-no-Pull-Request-1605352e646e80a0950bdc941013fb69)
-
-[Guia para revisão de código](https://www.notion.so/kaminoteam/Guia-para-Revis-o-de-C-digo-1365352e646e80b9a064e0dd3d519c0f)
+- Guia para escrita de Pull Requests (documentacao interna do time)
+- Guia para escrita de comentarios no Pull Request (documentacao interna do time)
+- Guia para revisao de codigo (documentacao interna do time)
 ```
 
 ### Regras de Preenchimento
